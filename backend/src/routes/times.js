@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db } from "../db/index.js";
+import { pool } from "../db/index.js";
 
 export const timesRouter = Router();
 
@@ -15,28 +15,35 @@ export function classificar(pontuacaoAtual) {
   return { label: "Ruim", cor: "vermelho" };
 }
 
-timesRouter.get("/", (req, res) => {
-  const times = db
-    .prepare(
+timesRouter.get("/", async (req, res, next) => {
+  try {
+    const { rows: times } = await pool.query(
       `SELECT t.*, b.nome as bloco_nome
        FROM times t JOIN blocos b ON b.id = t.bloco_id
        ORDER BY t.pontuacao_atual DESC`
-    )
-    .all();
+    );
 
-  const comClassificacao = times.map((t) => ({
-    ...t,
-    pontos_perdidos: 500 - t.pontuacao_atual,
-    classificacao: classificar(t.pontuacao_atual),
-  }));
+    const comClassificacao = times.map((t) => ({
+      ...t,
+      pontos_perdidos: 500 - t.pontuacao_atual,
+      classificacao: classificar(t.pontuacao_atual),
+    }));
 
-  res.json(comClassificacao);
+    res.json(comClassificacao);
+  } catch (err) {
+    next(err);
+  }
 });
 
-timesRouter.post("/", (req, res) => {
-  const { nome, blocoId } = req.body;
-  const info = db
-    .prepare("INSERT INTO times (nome, bloco_id, pontuacao_atual) VALUES (?, ?, 500)")
-    .run(nome, blocoId);
-  res.status(201).json({ id: info.lastInsertRowid });
+timesRouter.post("/", async (req, res, next) => {
+  try {
+    const { nome, blocoId } = req.body;
+    const { rows } = await pool.query(
+      "INSERT INTO times (nome, bloco_id, pontuacao_atual) VALUES ($1, $2, 500) RETURNING id",
+      [nome, blocoId]
+    );
+    res.status(201).json({ id: rows[0].id });
+  } catch (err) {
+    next(err);
+  }
 });

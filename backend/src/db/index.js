@@ -1,16 +1,24 @@
-import Database from "better-sqlite3";
+import pg from "pg";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dataDir = path.join(__dirname, "..", "..", "data");
-if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
-const dbPath = path.join(dataDir, "5s.db");
-export const db = new Database(dbPath);
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+  throw new Error("DATABASE_URL não configurada (connection string do Supabase/Postgres)");
+}
 
-export function initSchema() {
+// Supabase exige SSL; conexões locais (ex: `localhost`) dispensam.
+const useSsl = !/localhost|127\.0\.0\.1/.test(connectionString);
+
+export const pool = new pg.Pool({
+  connectionString,
+  ssl: useSsl ? { rejectUnauthorized: false } : false,
+});
+
+export async function initSchema() {
   const schema = fs.readFileSync(path.join(__dirname, "schema.sql"), "utf-8");
-  db.exec(schema);
+  await pool.query(schema);
 }

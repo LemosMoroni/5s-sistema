@@ -1,14 +1,23 @@
 import { Router } from "express";
-import { db } from "../db/index.js";
+import { pool } from "../db/index.js";
 
 export const blocosRouter = Router();
 
-blocosRouter.get("/", (req, res) => {
-  res.json(db.prepare("SELECT * FROM blocos ORDER BY nome").all());
+blocosRouter.get("/", async (req, res, next) => {
+  try {
+    const { rows } = await pool.query("SELECT * FROM blocos ORDER BY nome");
+    res.json(rows);
+  } catch (err) {
+    next(err);
+  }
 });
 
-blocosRouter.post("/", (req, res) => {
-  const { nome } = req.body;
-  const info = db.prepare("INSERT INTO blocos (nome) VALUES (?)").run(nome);
-  res.status(201).json({ id: info.lastInsertRowid });
+blocosRouter.post("/", async (req, res, next) => {
+  try {
+    const { nome } = req.body;
+    const { rows } = await pool.query("INSERT INTO blocos (nome) VALUES ($1) RETURNING id", [nome]);
+    res.status(201).json({ id: rows[0].id });
+  } catch (err) {
+    next(err);
+  }
 });

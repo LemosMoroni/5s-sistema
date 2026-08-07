@@ -56,7 +56,16 @@ e este arquivo.
 
 ## Stack e convenções
 
-- Backend: Express + better-sqlite3 (SQLite local, arquivo em `backend/data/5s.db`).
+- Backend: Express + `pg` (Postgres via Supabase). Todas as rotas são
+  assíncronas (`async/await` + `pool.query`), com erros propagados via
+  `next(err)` para o handler central em `backend/src/app.js`.
+- Deploy: Supabase (banco) + Vercel (backend como função serverless em
+  `backend/api/index.js`, frontend como site estático). São dois projetos
+  Vercel separados — `backend/` e `frontend/` como Root Directory de cada um.
+  O frontend fala com o backend via `VITE_API_URL` (variável de ambiente).
+- Schema em `backend/src/db/schema.sql`, aplicado via `npm run db:migrate`
+  (idempotente — `CREATE TABLE IF NOT EXISTS`). Não roda a cada cold start,
+  só quando o schema muda.
 - Frontend: React + Vite, sem framework de UI pesado — CSS puro com variáveis
   de tema em `frontend/src/styles/theme.css` (cores institucionais SENAI:
   azul `#003087`, azul secundário `#1F5C99`, laranja `#F47920`).

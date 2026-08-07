@@ -1,4 +1,7 @@
-const BASE = "/api";
+// Em dev local, o Vite faz proxy de /api para o backend (vite.config.js).
+// Em produção (Vercel), o frontend e o backend são projetos separados, então
+// aponta para a URL pública do backend via VITE_API_URL.
+const BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : "/api";
 
 async function request(path, options = {}) {
   const res = await fetch(BASE + path, {
